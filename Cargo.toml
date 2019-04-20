@@ -1,0 +1,14 @@
+[package]
+name = "vst2-window"
+version = "0.1.0"
+authors = ["Charles Saracco <crsaracco@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+gl = "0.12.0"
+log = "0.4.6"
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+x11 = { version = "2.18.1", features = ["xlib", "glx"] }
+xcb = { version = "0.8.2", features = ["thread", "xlib_xcb", "dri2"]  }
+crossbeam = "0.7.1"
