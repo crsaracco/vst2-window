@@ -10,7 +10,6 @@ pub fn new_x_handle_arc() -> Arc<XHandle> {
     Arc::new(XHandle::new().unwrap())
 }
 
-#[derive(Clone)]
 pub struct XHandle {
     conn: Arc<xcb::Connection>,
     screen_num: i32,
@@ -65,8 +64,12 @@ impl XHandle {
         self.conn.generate_id()
     }
 
-    pub fn conn(&self) -> Arc<xcb::Connection> {
+    fn conn(&self) -> Arc<xcb::Connection> {
         self.conn.clone()
+    }
+
+    pub fn conn_ref(&self) -> &xcb::Connection {
+        &self.conn
     }
 
     pub fn screen_num(&self) -> i32 {
@@ -120,9 +123,10 @@ impl XHandle {
     }
 }
 
+
 impl Drop for XHandle {
     fn drop(&mut self) {
-        println!("====================================== XHandle::drop()");
+        info!("XHandle::drop()");
     }
 }
 

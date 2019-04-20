@@ -1,5 +1,4 @@
 use std::ffi::c_void;
-use log::*;
 
 use crate::platform::PlatformWindow;
 

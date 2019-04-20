@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 gl = "0.12.0"
 log = "0.4.6"
+simplelog = "^0.5.0"
 
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 x11 = { version = "2.18.1", features = ["xlib", "glx"] }

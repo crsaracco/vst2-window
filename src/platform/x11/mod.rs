@@ -18,6 +18,10 @@ mod gl_utils;
 mod visual_info;
 mod x11_window;
 
+pub struct Wtf {
+}
+
+
 pub struct PlatformWindow {
     t: Option<thread::JoinHandle<()>>,
     window_id: Arc<atomic::AtomicU32>,
@@ -38,7 +42,6 @@ impl WindowImpl for PlatformWindow {
         let t = thread::spawn(move || {
             let window = x11_window::X11Window::new(thread_x_handle.clone(), parent_id, 1024, 1024);
             thread_window_id.store(window.id(), atomic::Ordering::Relaxed);
-            info!("Window id: {}", window.id());
 
             let ctx = gl_utils::create_gl_context(thread_x_handle.clone(), &window);
 
@@ -62,39 +65,27 @@ impl Drop for PlatformWindow {
     fn drop(&mut self) {
         info!("PlatformWindow::drop()");
         // Send a CLIENT_MESSAGE event to our event handler to tell it to stop processing events
-        unsafe{
-            let window_id = self.window_id.load(atomic::Ordering::Relaxed);
-            info!("window_id: {}", window_id);
+        let window_id = self.window_id.load(atomic::Ordering::Relaxed);
 
-            let d = xcb::ffi::xproto::xcb_client_message_data_t { data: [0x00u8; 20] };
+        let d = xcb::ffi::xproto::xcb_client_message_data_t { data: [0x00u8; 20] };
 
-            let ev = xcb::ffi::xproto::xcb_client_message_event_t {
-                response_type: xcb::ffi::xproto::XCB_CLIENT_MESSAGE,
-                format: 32,
-                window: window_id,
-                type_: self.x_handle.delete_window_atom(),
-                data: d,
-                sequence: 0,
-            };
+        let ev = xcb::ffi::xproto::xcb_client_message_event_t {
+            response_type: xcb::ffi::xproto::XCB_CLIENT_MESSAGE,
+            format: 32,
+            window: window_id,
+            type_: self.x_handle.delete_window_atom(),
+            data: d,
+            sequence: 0,
+        };
 
-            self.x_handle.send_event(window_id, &ev as *const xcb::ffi::xproto::xcb_client_message_event_t as *const i8);
+        self.x_handle.send_event(window_id, &ev as *const xcb::ffi::xproto::xcb_client_message_event_t as *const i8);
 
 
-            self.x_handle.flush();
-        }
-
-        info!("joining....");
+        self.x_handle.flush();
 
         if let Some(handle) = self.t.take() {
             handle.join();
         }
-        else {
-            info!("FAILED TO JOIN????");
-        }
-
-        info!("Arc count: {}", Arc::strong_count(&self.x_handle));
-
-        info!("platform window dropped.");
     }
 }
 
@@ -103,10 +94,9 @@ fn handle_events(
     win: u32,
     ctx: *mut x11::glx::__GLXcontextRec,
 ) {
+    info!("Event loop begin");
     loop {
-        info!("Event loop begin");
         if let Some(ev) = x_handle.wait_for_event() {
-            info!("fucking event type: {:?}", ev.response_type());
             let ev_type = ev.response_type() & !0x80;
             match ev_type {
                 xcb::EXPOSE => {
@@ -138,7 +128,7 @@ fn handle_events(
 
                     // TODO(hack): Move this somewhere else.
                     unsafe {
-                        glXDestroyContext(x_handle.conn().get_raw_dpy(), ctx);
+                        glXDestroyContext(x_handle.raw_display(), ctx);
                     }
 
                     break;
@@ -174,8 +164,7 @@ fn handle_events(
         else {
             break;
         }
-        info!("Event loop end");
     }
     x_handle.flush();
-    info!("Thread dead.");
+    info!("Event loop end");
 }

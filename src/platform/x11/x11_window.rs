@@ -23,10 +23,15 @@ impl X11Window {
         // Get the screen struct using the VisualInfo information
         let screen = x_handle.screen(visual_info.screen());
 
+        let mut parent = parent_id;
+        if parent == 0 {
+            parent = screen.root()
+        }
+
         // Create a color map
         let color_map_id = x_handle.generate_id();
-        xcb::create_colormap(&x_handle.conn(),xcb::COLORMAP_ALLOC_NONE as u8,color_map_id,
-                             parent_id, visual_info.visual_id());
+        xcb::create_colormap(x_handle.conn_ref(), xcb::COLORMAP_ALLOC_NONE as u8,color_map_id,
+                             parent, visual_info.visual_id());
 
         // Get an ID for the window
         let id = x_handle.generate_id();
@@ -41,17 +46,17 @@ impl X11Window {
         ];
 
         // Actually create the X11 window
-        xcb::create_window(&x_handle.conn(), visual_info.depth(), id, parent_id, 0, 0, width, height,
+        xcb::create_window(x_handle.conn_ref(), visual_info.depth(), id, parent, 0, 0, width, height,
                            0, xcb::WINDOW_CLASS_INPUT_OUTPUT as u16,
                            visual_info.visual_id(), &arguments);
 
         // Allow deleting the window via the "protocols" / "delete_window" atoms (??? black magic)
         let protocols = [x_handle.protocols_atom()];
-        xcb::change_property(&x_handle.conn(), xcb::PROP_MODE_REPLACE as u8,
+        xcb::change_property(x_handle.conn_ref(), xcb::PROP_MODE_REPLACE as u8,
                              id, x_handle.protocols_atom(), xcb::ATOM_ATOM, 32, &protocols);
 
         // Map (display) the window
-        xcb::map_window(&x_handle.conn(), id);
+        xcb::map_window(x_handle.conn_ref(), id);
         x_handle.flush();
         unsafe {
             xlib::XSync(x_handle.raw_display(), xlib::False);
@@ -77,9 +82,9 @@ impl X11Window {
 impl Drop for X11Window {
     fn drop(&mut self) {
         info!("X11Window::Drop()");
-        xcb::unmap_window(&self.x_handle.conn(), self.id);
-        xcb::destroy_window(&self.x_handle.conn(), self.id);
-        xcb::free_colormap(&self.x_handle.conn(), self.color_map_id);
+        xcb::unmap_window(self.x_handle.conn_ref(), self.id);
+        xcb::destroy_window(self.x_handle.conn_ref(), self.id);
+        xcb::free_colormap(self.x_handle.conn_ref(), self.color_map_id);
         self.x_handle.flush();
     }
 }
