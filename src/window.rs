@@ -9,7 +9,6 @@ pub struct Window {
 
 impl Window {
     pub fn new(parent: *mut c_void) -> Self {
-        info!("Window::new()");
         Self {
             platform_window: Box::new(PlatformWindow::new(parent)),
         }

@@ -2,6 +2,7 @@ use std::os::raw::c_void;
 
 use x11::glx::*;
 use x11::xlib;
+use log::*;
 
 use super::gl_utils;
 
@@ -12,6 +13,7 @@ pub struct VisualInfo {
 
 impl VisualInfo {
     pub fn new(display: *mut xlib::Display, screen_num: i32) -> Self {
+        info!("VisualInfo::new()");
         let glx_frame_buffer_config = gl_utils::get_glxfbconfig(display, screen_num, &[
             GLX_X_RENDERABLE, 1,
             GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
@@ -63,6 +65,7 @@ impl VisualInfo {
 impl Drop for VisualInfo {
     fn drop(&mut self) {
         unsafe {
+            info!("VisualInfo::drop()");
             xlib::XFree(self.visual_info as *mut c_void);
         }
     }

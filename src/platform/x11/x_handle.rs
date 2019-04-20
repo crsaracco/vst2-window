@@ -2,8 +2,13 @@ use std::sync::Arc;
 
 use xcb;
 use x11;
+use log::*;
 
 use super::gl_utils;
+
+pub fn new_x_handle_arc() -> Arc<XHandle> {
+    Arc::new(XHandle::new().unwrap())
+}
 
 #[derive(Clone)]
 pub struct XHandle {
@@ -15,7 +20,8 @@ pub struct XHandle {
 }
 
 impl XHandle {
-    pub fn new_arc() -> Result<Arc<Self>, String> {
+    fn new() -> Result<Self, String> {
+        info!("XHandle::new()");
         let (conn, screen_num) = xcb::Connection::connect_with_xlib_display().unwrap();
         let conn = Arc::new(conn);
 
@@ -42,13 +48,13 @@ impl XHandle {
         let wm_protocols_atom = make_cookie_atom(conn.clone(), false, "WM_PROTOCOLS");
         let wm_delete_window_atom = make_cookie_atom(conn.clone(), false, "WM_DELETE_WINDOW");
 
-        Ok(Arc::new(Self {
+        Ok(Self {
             conn,
             screen_num,
             first_dri2_event_id,
             protocols_atom: wm_protocols_atom,
             delete_window_atom: wm_delete_window_atom,
-        }))
+        })
     }
 
     pub fn flush(&self) {
@@ -95,6 +101,28 @@ impl XHandle {
 
     pub fn raw_display(&self) -> *mut x11::xlib::Display {
         self.conn.get_raw_dpy()
+    }
+
+    pub fn send_event(&self, window_id: u32, event: *const i8) {
+        unsafe{
+            xcb::ffi::xproto::xcb_send_event(
+                self.conn.get_raw_conn(),
+                false as u8,
+                window_id,
+                0,
+                event,
+            );
+        }
+    }
+
+    pub fn wait_for_event(&self) -> Option<xcb::Event<xcb::ffi::xcb_generic_event_t>> {
+        self.conn.wait_for_event()
+    }
+}
+
+impl Drop for XHandle {
+    fn drop(&mut self) {
+        println!("====================================== XHandle::drop()");
     }
 }
 
